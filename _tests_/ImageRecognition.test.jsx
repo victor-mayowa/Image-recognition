@@ -1,53 +1,74 @@
-// import React from "react";
-// import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-// import ImageRecognition from "./ImageRecognition";
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import ImageRecognition from "../src/Component/ImageRecognition"
 
-// // Mock TensorFlow coco-ssd model
-// jest.mock("@tensorflow-models/coco-ssd", () => ({
-//   load: jest.fn().mockResolvedValue({
-//     detect: jest.fn().mockResolvedValue([
-//       {
-//         class: "person",
-//         score: 0.98,
-//         bbox: [10, 20, 100, 200],
-//       },
-//     ]),
-//   }),
-// }));
+// Mock TensorFlow model
+jest.mock("@tensorflow-models/coco-ssd", () => ({
+  load: jest.fn().mockResolvedValue({
+    detect: jest.fn().mockResolvedValue([
+      { class: "person", score: 0.96, bbox: [10, 20, 100, 200] },
+    ]),
+  }),
+}));
+jest.mock("@tensorflow/tfjs", () => ({}));
 
-// // Mock tfjs to avoid errors
-// jest.mock("@tensorflow/tfjs", () => ({}));
+global.URL.createObjectURL = jest.fn(() => "mock-url");
 
-// // Mock URL.createObjectURL
-// global.URL.createObjectURL = jest.fn(() => "mock-url");
 
-// describe("ImageRecognition Component", () => {
-//   test("renders upload input", () => {
-//     render(<ImageRecognition />);
-//     expect(screen.getByLabelText(/Upload an Image/i)).toBeInTheDocument();
-//   });
+describe("ImageRecognition - Image Processing & Predictions", () => {
+  test("1. Uploading image triggers prediction", async () => {
+    render(<ImageRecognition />);
+    const input = screen.getByLabelText(/Upload an Image/i);
+    const file = new File(["dummy"], "image.png", { type: "image/png" });
 
-//   test("loads model on mount", async () => {
-//     render(<ImageRecognition />);
-//     await waitFor(() => {
-//       expect(screen.getByText(/AI-Powered Image Recognition/i)).toBeInTheDocument();
-//     });
-//   });
+    fireEvent.change(input, { target: { files: [file] } });
 
-//   test("displays image and predictions after upload", async () => {
-//     render(<ImageRecognition />);
+    await waitFor(() =>
+      expect(screen.getByText(/person/i)).toBeInTheDocument()
+    );
+    expect(screen.getByText(/Confidence: 96%/i)).toBeInTheDocument();
+  });
 
-//     const file = new File(["(⌐□_□)"], "test-image.png", { type: "image/png" });
+  test("2. Displays multiple predictions", async () => {
+    const coco = require("@tensorflow-models/coco-ssd");
+    coco.load.mockResolvedValueOnce({
+      detect: jest.fn().mockResolvedValue([
+        { class: "person", score: 0.95, bbox: [10, 10, 100, 100] },
+        { class: "cat", score: 0.88, bbox: [20, 20, 80, 80] },
+      ]),
+    });
 
-//     const input = screen.getByLabelText(/Upload an Image/i);
-//     fireEvent.change(input, { target: { files: [file] } });
+    render(<ImageRecognition />);
+    const input = screen.getByLabelText(/Upload an Image/i);
+    const file = new File(["dummy"], "image.png", { type: "image/png" });
 
-//     // Wait for predictions to appear
-//     await waitFor(() =>
-//       expect(screen.getByText(/Detected Objects/i)).toBeInTheDocument()
-//     );
+    fireEvent.change(input, { target: { files: [file] } });
 
-//     expect(screen.getByText(/person/i)).toBeInTheDocument();
-//     expect(screen.getByText(/Confidence: 98%/i)).toBeInTheDocument();
-//   });
-// });
+    await waitFor(() => {
+      expect(screen.getByText(/person/i)).toBeInTheDocument();
+      expect(screen.getByText(/cat/i)).toBeInTheDocument();
+    });
+  });
+
+  test("3. Handles no predictions gracefully", async () => {
+    const coco = require("@tensorflow-models/coco-ssd");
+    coco.load.mockResolvedValueOnce({
+      detect: jest.fn().mockResolvedValue([]),
+    });
+
+    render(<ImageRecognition />);
+    const input = screen.getByLabelText(/Upload an Image/i);
+    const file = new File(["dummy"], "image.png", { type: "image/png" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Detected Objects/i)).not.toBeInTheDocument();
+    });
+  });
+
+  test("4. Skips prediction if image is not uploaded", async () => {
+    render(<ImageRecognition />);
+    expect(screen.queryByText(/Detected Objects/i)).not.toBeInTheDocument();
+  });
+});
