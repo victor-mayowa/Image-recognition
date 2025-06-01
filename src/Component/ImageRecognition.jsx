@@ -72,7 +72,7 @@ const ImageRecognition = () => {
       <div className="mb-6">
         <label
           htmlFor="imageUpload"
-          className="block text-sm font-medium text-gray-700 mb-3"
+          className="inline-block px-6 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700 transition cursor-pointer"
         >
           Upload an Image
         </label>
@@ -81,7 +81,7 @@ const ImageRecognition = () => {
           type="file"
           accept="image/*"
           onChange={handleImageUpload}
-          className="block w-full cursor-pointer"
+          className="hidden"
         />
       </div>
       {image && (
