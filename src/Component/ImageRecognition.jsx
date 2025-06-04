@@ -22,6 +22,11 @@ const ImageRecognition = () => {
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
+       async function loadModel() {
+      const loadedModel = await cocoSsd.load();
+      setModel(loadedModel);
+    }
+    loadModel();
       const imageUrl = URL.createObjectURL(file);
       setImage(imageUrl);
     }

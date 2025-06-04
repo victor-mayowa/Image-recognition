@@ -1,4 +1,3 @@
-import './App.css'
 import ImageRecognition from './Component/ImageRecognition';
 
 function App() {
